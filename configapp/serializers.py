@@ -3,31 +3,36 @@ from rest_framework import serializers
 from .models import Todolist, User
 from django.utils import timezone
 class LoginSerializers(serializers.Serializer):
-    username = serializers.CharField()
+    phonenumber = serializers.CharField()
     password = serializers.CharField(write_only=True)
+    sms_kod = serializers.CharField(max_length=4)
 
-    def validate(self,attrs):
-        username = attrs.get("username")
+    def validate(self, attrs):
+        phonenumber = attrs.get("phonenumber")
         password = attrs.get("password")
+        sms_kod = attrs.get("sms_kod")
 
         try:
-            user = User.objects.get(username = username)
+            user = User.objects.get(phonenumber=phonenumber)
         except User.DoesNotExist:
-            raise serializers.ValidationError(
-                {
-                    "success":False,
-                    "detail":"User does not exist"
-                }
-            )
-        auth_user = authenticate(username = user.username,password = password)
-        if auth_user is None:
-            raise serializers.ValidationError(
-                {
-                    "success":False,
-                    "detail":"Username or password is invalid"
-                }
-            )
-        attrs["user"] = auth_user
+            raise serializers.ValidationError({
+                "success": False,
+                "detail": "User does not exist"
+            })
+
+        if not user.check_password(password):
+            raise serializers.ValidationError({
+                "success": False,
+                "detail": "Password is incorrect"
+            })
+
+        if user.sms_kod != sms_kod:
+            raise serializers.ValidationError({
+                "success": False,
+                "detail": "SMS code is incorrect"
+            })
+
+        attrs["user"] = user
         return attrs
 
 
@@ -35,14 +40,14 @@ class LoginSerializers(serializers.Serializer):
 class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'password', 'email']
+        fields = ['id', 'phonenumber', 'password', 'email']
         extra_kwargs = {
             'password': {'write_only': True}
         }
 
     def create(self, validated_data):
         user = User.objects.create_user(
-            username=validated_data['username'],
+            phonenumber=validated_data['phonenumber'],
             password=validated_data['password'],
             email=validated_data.get('email'),
             is_user=True
@@ -80,3 +85,5 @@ class ToDoListSerializer(serializers.ModelSerializer):
 
 
         return super().update(instance, validated_data)
+class SendSMSSerializer(serializers.Serializer):
+    phonenumber = serializers.CharField()
