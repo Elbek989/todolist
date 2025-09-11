@@ -11,7 +11,7 @@ from rest_framework.authtoken.models import Token
 class CustomUserManager(BaseUserManager):
     def create_user(self, phonenumber, password=None, **extra_fields):
         if not phonenumber:
-            raise ValueError('Username kiritish shart')
+            raise ValueError('raqam kiritish shart')
         user = self.model(phonenumber=phonenumber, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
@@ -29,10 +29,15 @@ class CustomUserManager(BaseUserManager):
 
 
 class User(AbstractUser, PermissionsMixin):
+    username = None
     phone_regex= RegexValidator(
                 regex=r'^\+998\d{9}$',
                 message='Telefon raqam +998 bilan boshlanishi va jami 13 ta belgidan iborat bo‘lishi kerak. Masalan: +998901234567')
+    name=models.CharField(max_length=50,null=True)
+    surname=models.CharField(max_length=50,null=True)
+
     phonenumber = models.CharField(validators=[phone_regex],max_length=13, unique=True)
+
     sms_kod=models.CharField(max_length=4,null=True)
     email = models.EmailField(unique=True, null=True, blank=True)
     is_admin = models.BooleanField(default=False)
